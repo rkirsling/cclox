@@ -1,0 +1,4 @@
+---
+Checks: '*,-google-*,-llvm-*,-readability-braces-around-statements,-cert-err58-cpp'
+HeaderFilterRegex: .*
+...
