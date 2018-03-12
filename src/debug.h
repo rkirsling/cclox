@@ -21,6 +21,6 @@ namespace Lox {
     const Chunk& chunk_;
     const std::string name_;
     size_t offset_ { 0 };
-    unsigned line_ { 0 };
+    unsigned line_ { 1 };
   };
 }
