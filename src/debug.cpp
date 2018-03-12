@@ -1,27 +1,24 @@
 #include "debug.h"
 
 #include "chunk.h"
-#include <iomanip>
-#include <iostream>
+#include <cstdio>
 
 namespace Lox {
   void ChunkPrinter::print() {
-    std::cout << "== " << name_ << " ==" << std::setfill('0') << std::hex;
+    printf("== %s ==\n", name_.c_str());
 
     offset_ = 0;
     while (offset_ < chunk_.size()) printInstruction();
-
-    std::cout << std::dec << std::setfill(' ') << std::endl;
   }
 
   void ChunkPrinter::printInstruction() {
-    std::cout << '\n' << std::setw(2) << offset_;
+    printf("%02zx", offset_);
 
     const auto line = chunk_.getLineNumber(offset_);
     if (offset_ > 0 && line == line_) {
-      std::cout << "   ..   ..   ";
+      printf("   ..   ..   ");
     } else {
-      std::cout << " <line " << std::setw(4) << std::dec << line << std::hex << "> ";
+      printf(" <line %04d> ", line);
       line_ = line;
     }
 
@@ -31,16 +28,16 @@ namespace Lox {
         printConstant();
         break;
       case OpCode::Return:
-        std::cout << "return";
+        printf("return\n");
         break;
       default:
-        std::cout << "unknown";
+        printf("unknown\n");
         break;
     }
   }
 
   void ChunkPrinter::printConstant() {
-    const auto index = static_cast<size_t>(chunk_.read(offset_++));
-    std::cout << "constant " << std::setw(2) << index << "  # value: " << chunk_.getConstant(index);
+    const auto index = chunk_.read(offset_++);
+    printf("constant %02x  # value: %g\n", index, chunk_.getConstant(index));
   }
 }
