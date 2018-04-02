@@ -1,20 +1,19 @@
 #pragma once
 
 #include <cstddef>
-#include <cstdint>
 #include <utility>
 #include <vector>
 
 namespace Lox {
-  enum class OpCode : uint8_t {
+  enum class OpCode : unsigned char {
     Constant,
     Return
   };
 
   class Chunk {
   public:
-    uint8_t read(size_t offset) const { return bytecode_[offset]; }
-    void write(uint8_t byte) { bytecode_.push_back(byte); }
+    std::byte read(size_t offset) const { return bytecode_[offset]; }
+    void write(std::byte byte) { bytecode_.push_back(byte); }
     void write(OpCode opCode, unsigned line);
 
     size_t size() const noexcept { return bytecode_.size(); }
@@ -25,7 +24,7 @@ namespace Lox {
     unsigned getLineNumber(size_t offset) const;
 
   private:
-    std::vector<uint8_t> bytecode_ {};
+    std::vector<std::byte> bytecode_ {};
     std::vector<double> constants_ {};
     std::vector<std::pair<unsigned, size_t>> lineStarts_ {};
   };

@@ -37,7 +37,7 @@ namespace Lox {
   }
 
   void ChunkPrinter::printConstant() {
-    const auto index = chunk_.read(offset_++);
-    printf("constant %02x  # value: %g\n", index, chunk_.getConstant(index));
+    const auto index = static_cast<size_t>(chunk_.read(offset_++));
+    printf("constant %02zx  # value: %g\n", index, chunk_.getConstant(index));
   }
 }

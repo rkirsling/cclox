@@ -4,7 +4,7 @@
 
 namespace Lox {
   void Chunk::write(OpCode opCode, unsigned line) {
-    write(static_cast<uint8_t>(opCode));
+    write(static_cast<std::byte>(opCode));
     if (!lineStarts_.empty() && lineStarts_.back().first == line) return;
 
     lineStarts_.emplace_back(line, size() - 1);

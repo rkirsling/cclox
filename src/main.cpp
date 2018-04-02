@@ -9,7 +9,7 @@ int main() {
 
   const auto index = chunk.addConstant(1.2);
   chunk.write(OpCode::Constant, 1);
-  chunk.write(index);
+  chunk.write(static_cast<std::byte>(index));
   chunk.write(OpCode::Return, 2);
 
   chunkPrinter.print();
