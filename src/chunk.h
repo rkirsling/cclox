@@ -7,6 +7,11 @@
 namespace Lox {
   enum class OpCode : unsigned char {
     Constant,
+    Add,
+    Subtract,
+    Multiply,
+    Divide,
+    Negative,
     Return
   };
 

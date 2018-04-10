@@ -16,7 +16,6 @@ namespace Lox {
 
   private:
     void printInstruction();
-    void printConstant();
 
     const Chunk& chunk_;
     const std::string name_;

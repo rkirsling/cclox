@@ -24,8 +24,24 @@ namespace Lox {
 
     const auto opCode = static_cast<OpCode>(chunk_.read(offset_++));
     switch (opCode) {
-      case OpCode::Constant:
-        printConstant();
+      case OpCode::Constant: {
+        const auto index = static_cast<size_t>(chunk_.read(offset_++));
+        printf("constant %02zx  # value: %g\n", index, chunk_.getConstant(index));
+      } break;
+      case OpCode::Add:
+        printf("add\n");
+        break;
+      case OpCode::Subtract:
+        printf("subtract\n");
+        break;
+      case OpCode::Multiply:
+        printf("multiply\n");
+        break;
+      case OpCode::Divide:
+        printf("divide\n");
+        break;
+      case OpCode::Negative:
+        printf("negative\n");
         break;
       case OpCode::Return:
         printf("return\n");
@@ -34,10 +50,5 @@ namespace Lox {
         printf("unknown\n");
         break;
     }
-  }
-
-  void ChunkPrinter::printConstant() {
-    const auto index = static_cast<size_t>(chunk_.read(offset_++));
-    printf("constant %02zx  # value: %g\n", index, chunk_.getConstant(index));
   }
 }
