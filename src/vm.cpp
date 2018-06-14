@@ -3,7 +3,14 @@
 #include "chunk.h"
 
 namespace Lox {
-  ResultStatus VM::interpret(const Chunk& chunk) {
+  ResultStatus VM::interpret(const std::string& source, unsigned line) {
+    compiler_.compile(source, line);
+
+    // temporary
+    return ResultStatus::OK;
+  }
+
+  ResultStatus VM::execute(const Chunk& chunk) {
     for (auto offset = 0u; offset < chunk.size(); ++offset) {
       const auto opCode = static_cast<OpCode>(chunk.read(offset));
 

@@ -1,6 +1,8 @@
 #pragma once
 
+#include "compiler.h"
 #include <functional>
+#include <string>
 #include <vector>
 
 namespace Lox {
@@ -14,11 +16,13 @@ namespace Lox {
 
   class VM {
   public:
-    ResultStatus interpret(const Chunk& chunk);
+    ResultStatus interpret(const std::string& source, unsigned line);
 
   private:
+    ResultStatus execute(const Chunk& chunk);
     void performBinaryOp(const std::function<double(double, double)>& op);
 
+    Compiler compiler_ {};
     std::vector<double> valueStack_ {};
   };
 }

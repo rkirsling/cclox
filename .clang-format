@@ -26,5 +26,6 @@ NamespaceIndentation: All
 PointerAlignment: Left
 ReflowComments: false
 SpaceAfterTemplateKeyword: false
+SpaceBeforeCpp11BracedList: true
 SpacesInContainerLiterals: false
 ...
