@@ -18,7 +18,7 @@ namespace Lox {
     if (offset_ > 0 && line == line_) {
       printf("   ..   ..   ");
     } else {
-      printf(" <line %04d> ", line);
+      printf(" <line %04u> ", line);
       line_ = line;
     }
 

@@ -4,14 +4,12 @@
 
 namespace Lox {
   ResultStatus VM::interpret(const Chunk& chunk) {
-    auto offset = 0u;
-
-    for (;;) {
-      const auto opCode = static_cast<OpCode>(chunk.read(offset++));
+    for (auto offset = 0u; offset < chunk.size(); ++offset) {
+      const auto opCode = static_cast<OpCode>(chunk.read(offset));
 
       switch (opCode) {
         case OpCode::Constant: {
-          const auto index = static_cast<size_t>(chunk.read(offset++));
+          const auto index = static_cast<size_t>(chunk.read(++offset));
           valueStack_.push_back(chunk.getConstant(index));
         } break;
         case OpCode::Add:
@@ -35,9 +33,11 @@ namespace Lox {
           return ResultStatus::OK;
       }
     }
+
+    return ResultStatus::DynamicError;
   }
 
-  inline void VM::performBinaryOp(const std::function<double(double, double)>& op) {
+  void VM::performBinaryOp(const std::function<double(double, double)>& op) {
     const auto rightOperand = valueStack_.back();
     valueStack_.pop_back();
     valueStack_.back() = op(valueStack_.back(), rightOperand);

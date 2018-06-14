@@ -1,3 +1,5 @@
+#pragma once
+
 #include <functional>
 #include <vector>
 
@@ -15,7 +17,7 @@ namespace Lox {
     ResultStatus interpret(const Chunk& chunk);
 
   private:
-    inline void performBinaryOp(const std::function<double(double, double)>& op);
+    void performBinaryOp(const std::function<double(double, double)>& op);
 
     std::vector<double> valueStack_ {};
   };
