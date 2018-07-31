@@ -35,9 +35,10 @@ int runFile(const char* path) {
 }
 
 int runPrompt() {
-  std::cout << "This is a minimal Lox REPL for debug use.\n";
-  std::cout << "* Statements may not include line breaks.\n";
-  std::cout << "* Standalone expressions are not allowed.\n\n";
+  std::cout
+    << "This is a minimal Lox REPL for debug use.\n"
+    << "* Statements may not include line breaks.\n"
+    << "* Standalone expressions are not allowed.\n\n";
 
   std::string source;
   for (auto line = 1u; ; ++line) {

@@ -1,6 +1,10 @@
 #pragma once
 
 #include "compiler.h"
+#ifndef NDEBUG
+#include "debug.h"
+#endif
+#include "error-reporter.h"
 #include <functional>
 #include <string>
 #include <vector>
@@ -22,7 +26,11 @@ namespace Lox {
     ResultStatus execute(const Chunk& chunk);
     void performBinaryOp(const std::function<double(double, double)>& op);
 
-    Compiler compiler_ {};
+#ifndef NDEBUG
+    ChunkPrinter chunkPrinter_ {};
+#endif
+    ErrorReporter errorReporter_ {};
+    Compiler compiler_ { errorReporter_ };
     std::vector<double> valueStack_ {};
   };
 }

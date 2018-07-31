@@ -1,5 +1,5 @@
 CXX := clang++
-CXXFLAGS := -std=c++1z -Wall -Wextra -pedantic -O3 -flto
+CXXFLAGS := -std=c++17 -Wall -Wextra -pedantic -O3 -flto -DNDEBUG
 
 SOURCE_DIR := src
 OUTPUT_DIR := build

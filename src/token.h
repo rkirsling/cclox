@@ -58,9 +58,9 @@ namespace Lox {
   };
 
   struct Token {
-    const TokenType type;
-    const std::string_view lexeme;
-    const unsigned line;
-    const unsigned column;
+    TokenType type;
+    std::string_view lexeme;
+    unsigned line;
+    unsigned column;
   };
 }

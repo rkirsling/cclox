@@ -2,24 +2,19 @@
 
 #include <cstddef>
 #include <string>
-#include <utility>
 
 namespace Lox {
   class Chunk;
 
   class ChunkPrinter {
   public:
-    ChunkPrinter(const Chunk& chunk, std::string&& name)
-      : chunk_(chunk), name_(std::move(name)) {}
-
-    void print();
+    void print(const Chunk& chunk, const std::string& name);
 
   private:
     void printInstruction();
 
-    const Chunk& chunk_;
-    const std::string name_;
-    size_t offset_ { 0 };
-    unsigned line_ { 1 };
+    const Chunk* chunk_;
+    size_t offset_;
+    unsigned line_;
   };
 }

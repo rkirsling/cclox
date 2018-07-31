@@ -1,4 +1,4 @@
 ---
-Checks: '*,-cert-err58-cpp,-fuchsia-*,-google-*,-llvm-*,-*-braces-around-statements,-*-pointer-arithmetic,-*-vararg'
+Checks: '*,-cert-err58-cpp,-fuchsia-*,-google-*,-llvm-*,-*-braces-around-statements,-*-pointer-arithmetic'
 HeaderFilterRegex: .*
 ...

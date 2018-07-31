@@ -4,10 +4,15 @@
 
 namespace Lox {
   ResultStatus VM::interpret(const std::string& source, unsigned line) {
-    compiler_.compile(source, line);
+    errorReporter_.reset();
 
-    // temporary
-    return ResultStatus::OK;
+    const auto chunk = compiler_.compile(source, line);
+    if (errorReporter_.errorCount() > 0) return ResultStatus::StaticError;
+
+#ifndef NDEBUG
+    chunkPrinter_.print(*chunk, "root");
+#endif
+    return execute(*chunk);
   }
 
   ResultStatus VM::execute(const Chunk& chunk) {
@@ -35,7 +40,7 @@ namespace Lox {
           valueStack_.back() = -valueStack_.back();
           break;
         case OpCode::Return:
-          printf("%g\n", valueStack_.back());
+          printf("%g\n", valueStack_.back()); // temporary
           valueStack_.pop_back();
           return ResultStatus::OK;
       }

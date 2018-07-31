@@ -1,32 +1,37 @@
+#ifndef NDEBUG
 #include "debug.h"
 
 #include "chunk.h"
 #include <cstdio>
 
 namespace Lox {
-  void ChunkPrinter::print() {
-    printf("== %s ==\n", name_.c_str());
+  void ChunkPrinter::print(const Chunk& chunk, const std::string& name) {
+    printf("== %s ==\n", name.c_str());
 
+    chunk_ = &chunk;
     offset_ = 0;
-    while (offset_ < chunk_.size()) printInstruction();
+    line_ = -1;
+    while (offset_ < chunk_->size()) printInstruction();
+
+    printf("== end ==\n");
   }
 
   void ChunkPrinter::printInstruction() {
     printf("%02zx", offset_);
 
-    const auto line = chunk_.getLineNumber(offset_);
-    if (offset_ > 0 && line == line_) {
+    const auto line = chunk_->getLineNumber(offset_);
+    if (line == line_) {
       printf("   ..   ..   ");
     } else {
       printf(" <line %04u> ", line);
       line_ = line;
     }
 
-    const auto opCode = static_cast<OpCode>(chunk_.read(offset_++));
+    const auto opCode = static_cast<OpCode>(chunk_->read(offset_++));
     switch (opCode) {
       case OpCode::Constant: {
-        const auto index = static_cast<size_t>(chunk_.read(offset_++));
-        printf("constant %02zx  # value: %g\n", index, chunk_.getConstant(index));
+        const auto index = static_cast<size_t>(chunk_->read(offset_++));
+        printf("constant %02zx  # value: %g\n", index, chunk_->getConstant(index));
       } break;
       case OpCode::Add:
         printf("add\n");
@@ -52,3 +57,4 @@ namespace Lox {
     }
   }
 }
+#endif

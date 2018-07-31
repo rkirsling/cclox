@@ -10,9 +10,10 @@ namespace {
   constexpr bool isAlpha(char c) { return (c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z') || c == '_'; }
 
   constexpr bool isAlphanumeric(char c) { return isAlpha(c) || isDigit(c); }
+}
 
-  using Lox::TokenType;
-  const std::unordered_map<std::string_view, TokenType> keywordTypes {
+namespace Lox {
+  static const std::unordered_map<std::string_view, TokenType> keywordTypes {
     { "and", TokenType::And },
     { "break", TokenType::Break },
     { "class", TokenType::Class },
@@ -31,9 +32,7 @@ namespace {
     { "var", TokenType::Var },
     { "while", TokenType::While }
   };
-}
 
-namespace Lox {
   void Scanner::initialize(const std::string& source, unsigned line) {
     source_ = source;
     offset_ = 0;
