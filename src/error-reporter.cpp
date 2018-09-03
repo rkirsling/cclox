@@ -11,7 +11,7 @@ namespace {
 
 namespace Lox {
   void ErrorReporter::report(const LoxError& error, bool isDynamic) {
-    report(error.token.line, error.token.column, error.message, isDynamic);
+    report(error.line, error.column, error.message, isDynamic);
   }
 
   void ErrorReporter::report(unsigned line, unsigned column, const std::string& message, bool isDynamic) {

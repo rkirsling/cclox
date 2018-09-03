@@ -1,22 +1,15 @@
 #include "chunk.h"
 
-#include <algorithm>
+#include "token.h"
 
 namespace Lox {
-  void Chunk::write(OpCode opCode, unsigned line) {
+  void Chunk::write(OpCode opCode, const Token& token) {
     write(static_cast<std::byte>(opCode));
-    if (!lineStarts_.empty() && lineStarts_.back().first == line) return;
-
-    lineStarts_.emplace_back(line, size() - 1);
+    positions_.emplace(size() - 1, std::make_pair(token.line, token.column));
   }
 
-  size_t Chunk::addConstant(double value) {
+  size_t Chunk::addConstant(Value value) {
     constants_.push_back(value);
     return constants_.size() - 1;
-  }
-
-  unsigned Chunk::getLineNumber(size_t offset) const {
-    const auto lessEqual = [=](const auto& lineStart) { return lineStart.second <= offset; };
-    return std::find_if(lineStarts_.crbegin(), lineStarts_.crend(), lessEqual)->first;
   }
 }

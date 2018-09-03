@@ -14,7 +14,6 @@ namespace Lox {
     void printInstruction();
 
     const Chunk* chunk_;
-    size_t offset_;
-    unsigned line_;
+    size_t offset_ { 0 };
   };
 }

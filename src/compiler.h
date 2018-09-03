@@ -22,10 +22,12 @@ namespace Lox {
     using CompilerMethod = std::function<void(Compiler*)>;
     using OperatorMap = std::unordered_map<TokenType, OpCode>;
 
-    void emit(OpCode opCode, unsigned line);
-    void emit(double value, unsigned line);
+    void emit(OpCode opCode, const Token& token);
+    void emit(Value value, const Token& token);
 
     void parseExpression();
+    void parseEquality();
+    void parseComparison();
     void parseAdditive();
     void parseMultiplicative();
     void parseBinary(const CompilerMethod& parseOperand, const OperatorMap& operators);
@@ -36,7 +38,7 @@ namespace Lox {
 
     bool isAtEnd() const;
     bool peekIs(TokenType type) const;
-    unsigned advance();
+    Token advance();
     bool advanceIf(TokenType type);
     void expect(TokenType type, std::string&& errorMessage);
 
