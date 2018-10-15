@@ -1,13 +1,29 @@
 #include "vm.h"
 
+#include <iostream>
+#include <sstream>
 #include <stdexcept>
 
 namespace Lox {
-  constexpr static bool isTruthy(Value value) {
+  static bool isTruthy(const Value& value) {
     return std::holds_alternative<bool>(value) ? std::get<bool>(value) : !std::holds_alternative<std::monostate>(value);
   }
 
-  ResultStatus VM::interpret(const std::string& source, unsigned line) {
+  static std::string stringify(const Value& value) {
+    if (const auto string = std::get_if<std::string>(&value)) return *string;
+
+    if (const auto number = std::get_if<double>(&value)) {
+      std::ostringstream oss {};
+      oss << *number;
+      return oss.str();
+    }
+
+    if (const auto boolean = std::get_if<bool>(&value)) return *boolean ? "true" : "false";
+
+    return "nil";
+  }
+
+  ResultStatus VM::interpret(std::string_view source, unsigned line) {
     errorReporter_.reset();
 
     chunk_ = compiler_.compile(source, line);
@@ -23,6 +39,7 @@ namespace Lox {
       execute();
     } catch (const LoxError& error) {
       errorReporter_.report(error, true);
+      valueStack_.clear();
       return ResultStatus::DynamicError;
     }
 
@@ -56,24 +73,49 @@ namespace Lox {
           valueStack_.back() = valueStack_.back() != rightOperand;
         } break;
         case OpCode::Greater: {
-          const auto rightOperand = popNumberOperand();
-          valueStack_.back() = peekNumberOperand() > rightOperand;
+          if (peekSecondIs<double>()) {
+            const auto rightOperand = popNumberOperand();
+            valueStack_.back() = std::get<double>(valueStack_.back()) > rightOperand;
+          } else {
+            const auto rightOperand = popStringOperand();
+            valueStack_.back() = peekStringOperand().compare(rightOperand) > 0;
+          }
         } break;
         case OpCode::GreaterEqual: {
-          const auto rightOperand = popNumberOperand();
-          valueStack_.back() = peekNumberOperand() >= rightOperand;
+          if (peekSecondIs<double>()) {
+            const auto rightOperand = popNumberOperand();
+            valueStack_.back() = std::get<double>(valueStack_.back()) >= rightOperand;
+          } else {
+            const auto rightOperand = popStringOperand();
+            valueStack_.back() = peekStringOperand().compare(rightOperand) >= 0;
+          }
         } break;
         case OpCode::Less: {
-          const auto rightOperand = popNumberOperand();
-          valueStack_.back() = peekNumberOperand() < rightOperand;
+          if (peekSecondIs<double>()) {
+            const auto rightOperand = popNumberOperand();
+            valueStack_.back() = std::get<double>(valueStack_.back()) < rightOperand;
+          } else {
+            const auto rightOperand = popStringOperand();
+            valueStack_.back() = peekStringOperand().compare(rightOperand) < 0;
+          }
         } break;
         case OpCode::LessEqual: {
-          const auto rightOperand = popNumberOperand();
-          valueStack_.back() = peekNumberOperand() <= rightOperand;
+          if (peekSecondIs<double>()) {
+            const auto rightOperand = popNumberOperand();
+            valueStack_.back() = std::get<double>(valueStack_.back()) <= rightOperand;
+          } else {
+            const auto rightOperand = popStringOperand();
+            valueStack_.back() = peekStringOperand().compare(rightOperand) <= 0;
+          }
         } break;
         case OpCode::Add: {
-          const auto rightOperand = popNumberOperand();
-          valueStack_.back() = peekNumberOperand() + rightOperand;
+          if (peekIs<std::string>() || peekSecondIs<std::string>()) {
+            const auto rightOperand = pop();
+            valueStack_.back() = stringify(valueStack_.back()) + stringify(rightOperand);
+          } else {
+            const auto rightOperand = popNumberOperand();
+            valueStack_.back() = peekNumberOperand() + rightOperand;
+          }
         } break;
         case OpCode::Subtract: {
           const auto rightOperand = popNumberOperand();
@@ -85,6 +127,8 @@ namespace Lox {
         } break;
         case OpCode::Divide: {
           const auto rightOperand = popNumberOperand();
+          if (rightOperand == 0) throw LoxError { chunk_->getPosition(offset_), "Cannot divide by zero." };
+
           valueStack_.back() = peekNumberOperand() / rightOperand;
         } break;
         case OpCode::Negative:
@@ -95,14 +139,7 @@ namespace Lox {
           break;
         case OpCode::Return:
           // temporary
-          if (const auto number = std::get_if<double>(&valueStack_.back())) {
-            printf("%g\n", *number);
-          } else if (const auto boolean = std::get_if<bool>(&valueStack_.back())) {
-            printf(*boolean ? "true\n" : "false\n");
-          } else {
-            printf("nil\n");
-          }
-          valueStack_.pop_back();
+          std::cout << stringify(pop()) << '\n';
           return;
       }
     }
@@ -113,6 +150,11 @@ namespace Lox {
   template<typename T>
   bool VM::peekIs() const {
     return std::holds_alternative<T>(valueStack_.back());
+  }
+
+  template<typename T>
+  bool VM::peekSecondIs() const {
+    return std::holds_alternative<T>(valueStack_.crbegin()[1]);
   }
 
   Value VM::pop() {

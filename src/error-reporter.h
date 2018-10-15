@@ -7,11 +7,11 @@
 
 namespace Lox {
   struct LoxError : public std::exception {
-    LoxError(const Token& token, std::string&& _message)
-      : line(token.line), column(token.column), message(std::move(_message)) {}
+    LoxError(const Token& token, std::string&& message)
+      : line(token.line), column(token.column), message(std::move(message)) {}
 
-    LoxError(std::pair<unsigned, unsigned> position, std::string&& _message)
-      : line(position.first), column(position.second), message(std::move(_message)) {}
+    LoxError(std::pair<unsigned, unsigned> position, std::string&& message)
+      : line(position.first), column(position.second), message(std::move(message)) {}
 
     const unsigned line;
     const unsigned column;

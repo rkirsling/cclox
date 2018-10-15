@@ -1,5 +1,6 @@
 .DS_Store
 .vscode/
 build/
+cmake-build/
 compile_commands.json
 tidy.sh

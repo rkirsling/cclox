@@ -2,13 +2,12 @@
 
 #include "token.h"
 #include <functional>
-#include <string>
 #include <string_view>
 
 namespace Lox {
   class Scanner {
   public:
-    void initialize(const std::string& source, unsigned line);
+    void initialize(std::string_view source, unsigned line);
 
     Token scanToken();
 

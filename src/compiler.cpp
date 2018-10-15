@@ -7,7 +7,7 @@
 #include <utility>
 
 namespace Lox {
-  std::unique_ptr<Chunk> Compiler::compile(const std::string& source, unsigned line) {
+  std::unique_ptr<Chunk> Compiler::compile(std::string_view source, unsigned line) {
     scanner_.initialize(source, line);
     chunk_ = std::make_unique<Chunk>();
     advance();
@@ -27,8 +27,8 @@ namespace Lox {
     chunk_->write(opCode, token);
   }
 
-  void Compiler::emit(Value value, const Token& token) {
-    const auto index = chunk_->addConstant(value);
+  void Compiler::emit(Value&& value, const Token& token) {
+    const auto index = chunk_->addConstant(std::move(value));
     if (index > std::numeric_limits<unsigned char>::max()) {
       throw std::overflow_error { "Too many constants in one chunk!" };
     }
@@ -116,6 +116,9 @@ namespace Lox {
       case TokenType::False:
         emit(OpCode::False, advance());
         return;
+      case TokenType::String:
+        parseString();
+        return;
       case TokenType::Number:
         parseNumber();
         return;
@@ -128,8 +131,15 @@ namespace Lox {
   }
 
   void Compiler::parseParenthesized() {
+    advance();
     parseExpression();
     expect(TokenType::RightParen, "Expected ')'.");
+  }
+
+  void Compiler::parseString() {
+    const auto string = std::string { peek_.lexeme.cbegin() + 1, peek_.lexeme.cend() - 1 };
+    const auto token = advance();
+    emit(string, token);
   }
 
   void Compiler::parseNumber() {

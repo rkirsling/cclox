@@ -1,14 +1,14 @@
 #pragma once
 
 #include <cstddef>
-#include <string>
+#include <string_view>
 
 namespace Lox {
   class Chunk;
 
   class ChunkPrinter {
   public:
-    void print(const Chunk& chunk, const std::string& name);
+    void print(const Chunk& chunk, std::string_view name);
 
   private:
     void printInstruction();

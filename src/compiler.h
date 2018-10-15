@@ -6,6 +6,7 @@
 #include <functional>
 #include <memory>
 #include <string>
+#include <string_view>
 #include <unordered_map>
 
 namespace Lox {
@@ -16,14 +17,14 @@ namespace Lox {
     explicit Compiler(ErrorReporter& errorReporter)
       : errorReporter_(errorReporter) {}
 
-    std::unique_ptr<Chunk> compile(const std::string& source, unsigned line);
+    std::unique_ptr<Chunk> compile(std::string_view source, unsigned line);
 
   private:
     using CompilerMethod = std::function<void(Compiler*)>;
     using OperatorMap = std::unordered_map<TokenType, OpCode>;
 
     void emit(OpCode opCode, const Token& token);
-    void emit(Value value, const Token& token);
+    void emit(Value&& value, const Token& token);
 
     void parseExpression();
     void parseEquality();
@@ -34,6 +35,7 @@ namespace Lox {
     void parseUnary();
     void parsePrimary();
     void parseParenthesized();
+    void parseString();
     void parseNumber();
 
     bool isAtEnd() const;

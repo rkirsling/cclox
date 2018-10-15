@@ -5,8 +5,8 @@
 #include <cstdio>
 
 namespace Lox {
-  void ChunkPrinter::print(const Chunk& chunk, const std::string& name) {
-    printf("== %s ==\n", name.c_str());
+  void ChunkPrinter::print(const Chunk& chunk, std::string_view name) {
+    printf("== %s ==\n", name.data());
 
     chunk_ = &chunk;
     offset_ = 0;
@@ -25,8 +25,12 @@ namespace Lox {
     switch (opCode) {
       case OpCode::Constant: {
         const auto index = static_cast<size_t>(chunk_->read(offset_++));
-        const auto number = std::get<double>(chunk_->getConstant(index));
-        printf("constant %02zx   # value: %g\n", index, number);
+        const auto value = chunk_->getConstant(index);
+        if (const auto string = std::get_if<std::string>(&value)) {
+          printf("constant %02zx   # value: \"%s\"\n", index, string->c_str());
+        } else if (const auto number = std::get_if<double>(&value)) {
+          printf("constant %02zx   # value: %g\n", index, *number);
+        }
       } break;
       case OpCode::Nil:
         printf("nil\n");

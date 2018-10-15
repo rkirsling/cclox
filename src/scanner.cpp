@@ -33,7 +33,7 @@ namespace Lox {
     { "while", TokenType::While }
   };
 
-  void Scanner::initialize(const std::string& source, unsigned line) {
+  void Scanner::initialize(std::string_view source, unsigned line) {
     source_ = source;
     offset_ = 0;
     line_ = line;
