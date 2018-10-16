@@ -20,7 +20,7 @@ namespace Lox {
 
   class ErrorReporter {
   public:
-    unsigned errorCount() const { return errorCount_; }
+    constexpr unsigned errorCount() const { return errorCount_; }
 
     void report(const LoxError& error, bool isDynamic = false);
     void report(unsigned line, unsigned column, const std::string& message, bool isDynamic = false);

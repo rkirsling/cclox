@@ -148,11 +148,11 @@ namespace Lox {
     emit(number, token);
   }
 
-  bool Compiler::isAtEnd() const {
+  constexpr bool Compiler::isAtEnd() const {
     return peekIs(TokenType::Eof);
   }
 
-  bool Compiler::peekIs(TokenType type) const {
+  constexpr bool Compiler::peekIs(TokenType type) const {
     return peek_.type == type;
   }
 
@@ -179,7 +179,7 @@ namespace Lox {
     advance();
   }
 
-  void Compiler::error() const {
+  constexpr void Compiler::error() const {
     errorReporter_.report(peek_.line, peek_.column, peek_.lexeme.data());
   }
 }

@@ -16,15 +16,15 @@ namespace Lox {
     Token scanNumber();
     Token scanIdentifierOrKeyword();
 
-    Token token(TokenType type) const;
-    Token eofToken() const;
-    Token errorToken(std::string_view message) const;
+    constexpr Token token(TokenType type) const;
+    constexpr Token eofToken() const;
+    constexpr Token errorToken(std::string_view message) const;
 
-    std::string_view lexeme() const;
+    constexpr std::string_view lexeme() const;
 
-    bool isAtEnd() const;
-    char peek() const;
-    char peekSecond() const;
+    constexpr bool isAtEnd() const;
+    constexpr char peek() const;
+    constexpr char peekSecond() const;
     char advance();
     bool advanceIf(char expected);
     bool advanceTo(char expected);

@@ -129,31 +129,31 @@ namespace Lox {
     return token(pair == keywordTypes.end() ? TokenType::Identifier : pair->second);
   }
 
-  Token Scanner::token(TokenType type) const {
+  constexpr Token Scanner::token(TokenType type) const {
     return Token { type, lexeme(), tokenLine_, tokenColumn_ };
   }
 
-  Token Scanner::eofToken() const {
+  constexpr Token Scanner::eofToken() const {
     return Token { TokenType::Eof, {}, line_, offset_ - lineStart_ };
   }
 
-  Token Scanner::errorToken(std::string_view message) const {
+  constexpr Token Scanner::errorToken(std::string_view message) const {
     return Token { TokenType::Error, message, line_, offset_ - lineStart_ };
   }
 
-  std::string_view Scanner::lexeme() const {
+  constexpr std::string_view Scanner::lexeme() const {
     return source_.substr(tokenOffset_, offset_ - tokenOffset_);
   }
 
-  bool Scanner::isAtEnd() const {
+  constexpr bool Scanner::isAtEnd() const {
     return offset_ >= source_.size();
   }
 
-  char Scanner::peek() const {
+  constexpr char Scanner::peek() const {
     return offset_ >= source_.size() ? '\0' : source_[offset_];
   }
 
-  char Scanner::peekSecond() const {
+  constexpr char Scanner::peekSecond() const {
     return offset_ + 1 >= source_.size() ? '\0' : source_[offset_ + 1];
   }
 

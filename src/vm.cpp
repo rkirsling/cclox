@@ -5,7 +5,7 @@
 #include <stdexcept>
 
 namespace Lox {
-  static bool isTruthy(const Value& value) {
+  static constexpr bool isTruthy(const Value& value) {
     return std::holds_alternative<bool>(value) ? std::get<bool>(value) : !std::holds_alternative<std::monostate>(value);
   }
 

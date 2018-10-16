@@ -38,13 +38,13 @@ namespace Lox {
     void parseString();
     void parseNumber();
 
-    bool isAtEnd() const;
-    bool peekIs(TokenType type) const;
+    constexpr bool isAtEnd() const;
+    constexpr bool peekIs(TokenType type) const;
     Token advance();
     bool advanceIf(TokenType type);
     void expect(TokenType type, std::string&& errorMessage);
 
-    void error() const;
+    constexpr void error() const;
 
     ErrorReporter& errorReporter_;
 

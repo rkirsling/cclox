@@ -34,11 +34,11 @@ namespace Lox {
 
   class Chunk {
   public:
-    std::byte read(size_t offset) const { return bytecode_[offset]; }
+    constexpr std::byte read(size_t offset) const { return bytecode_[offset]; }
     void write(std::byte byte) { bytecode_.push_back(byte); }
     void write(OpCode opCode, const Token& token);
 
-    size_t size() const noexcept { return bytecode_.size(); }
+    constexpr size_t size() const noexcept { return bytecode_.size(); }
 
     Value getConstant(size_t index) const { return constants_[index]; }
     size_t addConstant(Value&& value);
