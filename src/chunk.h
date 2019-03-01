@@ -17,6 +17,7 @@ namespace Lox {
     Nil,
     True,
     False,
+    Pop,
     Equal,
     NotEqual,
     Greater,
@@ -29,6 +30,7 @@ namespace Lox {
     Divide,
     Negative,
     Not,
+    Print,
     Return
   };
 

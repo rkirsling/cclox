@@ -64,6 +64,9 @@ namespace Lox {
         case OpCode::False:
           valueStack_.emplace_back(false);
           break;
+        case OpCode::Pop:
+          pop();
+          break;
         case OpCode::Equal: {
           const auto rightOperand = pop();
           valueStack_.back() = valueStack_.back() == rightOperand;
@@ -137,9 +140,10 @@ namespace Lox {
         case OpCode::Not:
           valueStack_.back() = !isTruthy(valueStack_.back());
           break;
-        case OpCode::Return:
-          // temporary
+        case OpCode::Print:
           std::cout << stringify(pop()) << '\n';
+          break;
+        case OpCode::Return:
           return;
       }
     }

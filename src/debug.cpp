@@ -41,6 +41,9 @@ namespace Lox {
       case OpCode::False:
         printf("false\n");
         break;
+      case OpCode::Pop:
+        printf("pop\n");
+        break;
       case OpCode::Equal:
         printf("equal\n");
         break;
@@ -76,6 +79,9 @@ namespace Lox {
         break;
       case OpCode::Not:
         printf("not\n");
+        break;
+      case OpCode::Print:
+        printf("print\n");
         break;
       case OpCode::Return:
         printf("return\n");

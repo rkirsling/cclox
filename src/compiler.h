@@ -26,6 +26,11 @@ namespace Lox {
     void emit(OpCode opCode, const Token& token);
     void emit(Value&& value, const Token& token);
 
+    void parseStatement();
+    void parseNonDeclaration();
+    void parsePrint();
+    void parseExpressionStatement();
+
     void parseExpression();
     void parseEquality();
     void parseComparison();
@@ -43,6 +48,9 @@ namespace Lox {
     Token advance();
     bool advanceIf(TokenType type);
     void expect(TokenType type, std::string&& errorMessage);
+    void expectSemicolon();
+
+    void synchronizeStatement(bool inBlock = false);
 
     constexpr void error() const;
 

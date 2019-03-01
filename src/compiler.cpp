@@ -4,22 +4,31 @@
 #include <cstdlib>
 #include <limits>
 #include <stdexcept>
+#include <unordered_set>
 #include <utility>
 
 namespace Lox {
+  static const std::unordered_set<TokenType> statementOpeners {
+    TokenType::LeftBrace,
+    TokenType::Break,
+    TokenType::Class,
+    TokenType::Fun,
+    TokenType::For,
+    TokenType::If,
+    TokenType::Print,
+    TokenType::Return,
+    TokenType::Var,
+    TokenType::While
+  };
+
   std::unique_ptr<Chunk> Compiler::compile(std::string_view source, unsigned line) {
     scanner_.initialize(source, line);
     chunk_ = std::make_unique<Chunk>();
     advance();
 
-    try {
-      parseExpression();
-      expect(TokenType::Eof, "Unexpected continuation of input.");
-      emit(OpCode::Return, peek_);
-    } catch (const LoxError& error) {
-      errorReporter_.report(error);
-    }
+    while (!isAtEnd()) parseStatement();
 
+    emit(OpCode::Return, peek_);
     return std::move(chunk_);
   }
 
@@ -35,6 +44,39 @@ namespace Lox {
 
     chunk_->write(OpCode::Constant, token);
     chunk_->write(static_cast<std::byte>(index));
+  }
+
+  void Compiler::parseStatement() {
+    try {
+      parseNonDeclaration();
+    } catch (const LoxError& error) {
+      errorReporter_.report(error);
+      synchronizeStatement();
+    }
+  }
+
+  void Compiler::parseNonDeclaration() {
+    switch (peek_.type) {
+      case TokenType::Print:
+        parsePrint();
+        return;
+      default:
+        parseExpressionStatement();
+        return;
+    }
+  }
+
+  void Compiler::parsePrint() {
+    const auto token = advance();
+    parseExpression();
+    expectSemicolon();
+    emit(OpCode::Print, token);
+  }
+
+  void Compiler::parseExpressionStatement() {
+    parseExpression();
+    emit(OpCode::Pop, peek_);
+    expectSemicolon();
   }
 
   void Compiler::parseExpression() {
@@ -177,6 +219,24 @@ namespace Lox {
     if (!peekIs(type)) throw LoxError { peek_, std::move(errorMessage) };
 
     advance();
+  }
+
+  void Compiler::expectSemicolon() {
+    if (!peekIs(TokenType::Semicolon)) throw LoxError { peek_, "Expected ';'." };
+
+    advance();
+  }
+
+  void Compiler::synchronizeStatement(bool inBlock) {
+    for (;; advance()) {
+      const auto isSynchronized =
+        isAtEnd() ||
+        advanceIf(TokenType::Semicolon) ||
+        (peekIs(TokenType::RightBrace) && inBlock) ||
+        statementOpeners.find(peek_.type) != statementOpeners.cend();
+
+      if (isSynchronized) break;
+    }
   }
 
   constexpr void Compiler::error() const {
