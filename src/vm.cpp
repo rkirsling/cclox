@@ -67,6 +67,31 @@ namespace Lox {
         case OpCode::Pop:
           pop();
           break;
+        case OpCode::DefineGlobal: {
+          const auto value = pop();
+          const auto name = std::get<std::string>(pop());
+          if (globals_.find(name) != globals_.cend()) {
+            throw LoxError { chunk_->getPosition(offset_), "Identifier '" + name + "' is already defined." };
+          }
+          globals_.emplace(name, value);
+        } break;
+        case OpCode::SetGlobal: {
+          const auto newValue = pop();
+          const auto name = std::get<std::string>(valueStack_.back());
+          const auto oldValue = globals_.find(name);
+          if (oldValue == globals_.cend()) {
+            throw LoxError { chunk_->getPosition(offset_), "Identifier '" + name + "' is undefined." };
+          }
+          valueStack_.back() = oldValue->second = newValue;
+        } break;
+        case OpCode::GetGlobal: {
+          const auto name = std::get<std::string>(valueStack_.back());
+          const auto value = globals_.find(name);
+          if (value == globals_.cend()) {
+            throw LoxError { chunk_->getPosition(offset_), "Identifier '" + name + "' is undefined." };
+          }
+          valueStack_.back() = value->second;
+        } break;
         case OpCode::Equal: {
           const auto rightOperand = pop();
           valueStack_.back() = valueStack_.back() == rightOperand;

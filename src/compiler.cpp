@@ -33,6 +33,11 @@ namespace Lox {
   }
 
   void Compiler::emit(OpCode opCode, const Token& token) {
+    if (pendingEmit_) {
+      chunk_->write(pendingEmit_->first, pendingEmit_->second);
+      pendingEmit_.reset();
+    }
+
     chunk_->write(opCode, token);
   }
 
@@ -42,17 +47,39 @@ namespace Lox {
       throw std::overflow_error { "Too many constants in one chunk!" };
     }
 
-    chunk_->write(OpCode::Constant, token);
+    emit(OpCode::Constant, token);
     chunk_->write(static_cast<std::byte>(index));
   }
 
   void Compiler::parseStatement() {
     try {
-      parseNonDeclaration();
+      switch (peek_.type) {
+        case TokenType::Var:
+          parseVariable();
+          return;
+        default:
+          parseNonDeclaration();
+          return;
+      }
     } catch (const LoxError& error) {
       errorReporter_.report(error);
       synchronizeStatement();
     }
+  }
+
+  void Compiler::parseVariable() {
+    const auto keyword = advance();
+    const auto identifier = expectIdentifier();
+    emit(std::string { identifier.lexeme }, identifier);
+
+    if (advanceIf(TokenType::Equal)) {
+      parseExpression();
+    } else {
+      emit(OpCode::Nil, peek_);
+    }
+
+    expectSemicolon();
+    emit(OpCode::DefineGlobal, keyword);
   }
 
   void Compiler::parseNonDeclaration() {
@@ -80,7 +107,19 @@ namespace Lox {
   }
 
   void Compiler::parseExpression() {
+    parseAssignment();
+  }
+
+  void Compiler::parseAssignment() {
     parseEquality();
+    if (!peekIs(TokenType::Equal)) return;
+
+    const auto op = advance();
+    if (!pendingEmit_) throw LoxError { op, "Invalid left-hand side of assignment." };
+
+    pendingEmit_.reset();
+    parseAssignment();
+    emit(OpCode::SetGlobal, op);
   }
 
   void Compiler::parseEquality() {
@@ -149,6 +188,9 @@ namespace Lox {
       case TokenType::LeftParen:
         parseParenthesized();
         return;
+      case TokenType::Identifier:
+        parseIdentifier();
+        return;
       case TokenType::Nil:
         emit(OpCode::Nil, advance());
         return;
@@ -176,6 +218,12 @@ namespace Lox {
     advance();
     parseExpression();
     expect(TokenType::RightParen, "Expected ')'.");
+  }
+
+  void Compiler::parseIdentifier() {
+    const auto identifier = advance();
+    emit(std::string { identifier.lexeme }, identifier);
+    pendingEmit_ = std::make_pair(OpCode::GetGlobal, identifier);
   }
 
   void Compiler::parseString() {
@@ -225,6 +273,12 @@ namespace Lox {
     if (!peekIs(TokenType::Semicolon)) throw LoxError { peek_, "Expected ';'." };
 
     advance();
+  }
+
+  Token Compiler::expectIdentifier() {
+    if (!peekIs(TokenType::Identifier)) throw LoxError { peek_, "Expected variable name." };
+
+    return advance();
   }
 
   void Compiler::synchronizeStatement(bool inBlock) {

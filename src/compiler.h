@@ -5,9 +5,11 @@
 #include "token.h"
 #include <functional>
 #include <memory>
+#include <optional>
 #include <string>
 #include <string_view>
 #include <unordered_map>
+#include <utility>
 
 namespace Lox {
   class ErrorReporter;
@@ -27,11 +29,13 @@ namespace Lox {
     void emit(Value&& value, const Token& token);
 
     void parseStatement();
+    void parseVariable();
     void parseNonDeclaration();
     void parsePrint();
     void parseExpressionStatement();
 
     void parseExpression();
+    void parseAssignment();
     void parseEquality();
     void parseComparison();
     void parseAdditive();
@@ -40,6 +44,7 @@ namespace Lox {
     void parseUnary();
     void parsePrimary();
     void parseParenthesized();
+    void parseIdentifier();
     void parseString();
     void parseNumber();
 
@@ -49,6 +54,7 @@ namespace Lox {
     bool advanceIf(TokenType type);
     void expect(TokenType type, std::string&& errorMessage);
     void expectSemicolon();
+    Token expectIdentifier();
 
     void synchronizeStatement(bool inBlock = false);
 
@@ -59,5 +65,6 @@ namespace Lox {
     Scanner scanner_ {};
     std::unique_ptr<Chunk> chunk_;
     Token peek_ { TokenType::Eof, {}, 0, 0 };
+    std::optional<std::pair<OpCode, Token>> pendingEmit_;
   };
 }

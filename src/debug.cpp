@@ -44,6 +44,15 @@ namespace Lox {
       case OpCode::Pop:
         printf("pop\n");
         break;
+      case OpCode::DefineGlobal:
+        printf("define_global\n");
+        break;
+      case OpCode::SetGlobal:
+        printf("set_global\n");
+        break;
+      case OpCode::GetGlobal:
+        printf("get_global\n");
+        break;
       case OpCode::Equal:
         printf("equal\n");
         break;

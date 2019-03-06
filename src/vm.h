@@ -8,6 +8,7 @@
 #include "error-reporter.h"
 #include <string>
 #include <string_view>
+#include <unordered_map>
 #include <vector>
 
 namespace Lox {
@@ -37,6 +38,7 @@ namespace Lox {
     ErrorReporter errorReporter_ {};
     Compiler compiler_ { errorReporter_ };
     std::vector<Value> valueStack_ {};
+    std::unordered_map<std::string, Value> globals_ {};
 #ifndef NDEBUG
     ChunkPrinter chunkPrinter_ {};
 #endif
