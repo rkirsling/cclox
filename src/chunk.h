@@ -21,6 +21,8 @@ namespace Lox {
     DefineGlobal,
     SetGlobal,
     GetGlobal,
+    SetLocal,
+    GetLocal,
     Equal,
     NotEqual,
     Greater,

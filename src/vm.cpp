@@ -65,7 +65,7 @@ namespace Lox {
           valueStack_.emplace_back(false);
           break;
         case OpCode::Pop:
-          pop();
+          valueStack_.pop_back();
           break;
         case OpCode::DefineGlobal: {
           const auto value = pop();
@@ -91,6 +91,14 @@ namespace Lox {
             throw LoxError { chunk_->getPosition(offset_), "Identifier '" + name + "' is undefined." };
           }
           valueStack_.back() = value->second;
+        } break;
+        case OpCode::SetLocal: {
+          const auto index = static_cast<size_t>(chunk_->read(++offset_));
+          valueStack_.begin()[index] = valueStack_.back();
+        } break;
+        case OpCode::GetLocal: {
+          const auto index = static_cast<size_t>(chunk_->read(++offset_));
+          valueStack_.push_back(valueStack_.cbegin()[index]);
         } break;
         case OpCode::Equal: {
           const auto rightOperand = pop();

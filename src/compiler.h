@@ -10,6 +10,7 @@
 #include <string_view>
 #include <unordered_map>
 #include <utility>
+#include <vector>
 
 namespace Lox {
   class ErrorReporter;
@@ -25,12 +26,25 @@ namespace Lox {
     using CompilerMethod = std::function<void(Compiler*)>;
     using OperatorMap = std::unordered_map<TokenType, OpCode>;
 
-    void emit(OpCode opCode, const Token& token);
-    void emit(Value&& value, const Token& token);
+    struct Instruction {
+      OpCode opCode;
+      Token token;
+      std::optional<std::byte> argument;
+    };
 
-    void parseStatement();
+    void emit(OpCode opCode, const Token& token, std::optional<std::byte> argument = std::nullopt);
+    void emitPendingInstruction();
+    void emitConstant(Value&& value, const Token& token);
+
+    void declareLocal(const Token& identifier);
+    void definePendingLocal();
+    void resolveLocal(const Token& identifier);
+    void popScopeLocals();
+
+    void parseStatement(bool inBlock = false);
     void parseVariable();
     void parseNonDeclaration();
+    void parseBlock();
     void parsePrint();
     void parseExpressionStatement();
 
@@ -56,7 +70,7 @@ namespace Lox {
     void expectSemicolon();
     Token expectIdentifier();
 
-    void synchronizeStatement(bool inBlock = false);
+    void synchronizeStatement(bool inBlock);
 
     constexpr void error() const;
 
@@ -64,7 +78,12 @@ namespace Lox {
 
     Scanner scanner_ {};
     std::unique_ptr<Chunk> chunk_;
+    std::vector<std::pair<std::string_view, unsigned>> locals_ {};
+
+    std::optional<Instruction> pendingInstruction_;
+    std::optional<std::string_view> pendingLocal_;
+
     Token peek_ { TokenType::Eof, {}, 0, 0 };
-    std::optional<std::pair<OpCode, Token>> pendingEmit_;
+    unsigned scopeDepth_ { 0 };
   };
 }

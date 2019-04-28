@@ -6,6 +6,7 @@
 #include "debug.h"
 #endif
 #include "error-reporter.h"
+#include <memory>
 #include <string>
 #include <string_view>
 #include <unordered_map>

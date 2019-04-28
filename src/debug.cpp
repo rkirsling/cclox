@@ -53,6 +53,14 @@ namespace Lox {
       case OpCode::GetGlobal:
         printf("get_global\n");
         break;
+      case OpCode::SetLocal: {
+        const auto index = static_cast<size_t>(chunk_->read(offset_++));
+        printf("set_local %02zx\n", index);
+      } break;
+      case OpCode::GetLocal: {
+        const auto index = static_cast<size_t>(chunk_->read(offset_++));
+        printf("get_local %02zx\n", index);
+      } break;
       case OpCode::Equal:
         printf("equal\n");
         break;

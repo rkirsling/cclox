@@ -5,7 +5,6 @@
 #include <limits>
 #include <stdexcept>
 #include <unordered_set>
-#include <utility>
 
 namespace Lox {
   static const std::unordered_set<TokenType> statementOpeners {
@@ -32,26 +31,76 @@ namespace Lox {
     return std::move(chunk_);
   }
 
-  void Compiler::emit(OpCode opCode, const Token& token) {
-    if (pendingEmit_) {
-      chunk_->write(pendingEmit_->first, pendingEmit_->second);
-      pendingEmit_.reset();
-    }
+  void Compiler::emit(OpCode opCode, const Token& token, std::optional<std::byte> argument) {
+    if (pendingInstruction_) emitPendingInstruction();
 
     chunk_->write(opCode, token);
+    if (argument) chunk_->write(*argument);
   }
 
-  void Compiler::emit(Value&& value, const Token& token) {
+  void Compiler::emitPendingInstruction() {
+    chunk_->write(pendingInstruction_->opCode, pendingInstruction_->token);
+    if (pendingInstruction_->argument) chunk_->write(*pendingInstruction_->argument);
+
+    pendingInstruction_.reset();
+  }
+
+  void Compiler::emitConstant(Value&& value, const Token& token) {
     const auto index = chunk_->addConstant(std::move(value));
     if (index > std::numeric_limits<unsigned char>::max()) {
       throw std::overflow_error { "Too many constants in one chunk!" };
     }
 
-    emit(OpCode::Constant, token);
-    chunk_->write(static_cast<std::byte>(index));
+    emit(OpCode::Constant, token, static_cast<std::byte>(index));
   }
 
-  void Compiler::parseStatement() {
+  void Compiler::declareLocal(const Token& identifier) {
+    if (locals_.size() == std::numeric_limits<unsigned char>::max()) {
+      throw std::overflow_error { "Too many locals in one function!" };
+    }
+
+    for (auto it = locals_.crbegin(); it != locals_.crend() && it->second == scopeDepth_; ++it) {
+      if (it->first == identifier.lexeme) {
+        throw LoxError {
+          identifier,
+          "Identifier '" + std::string { identifier.lexeme } + "' is already declared in this scope."
+        };
+      }
+    }
+
+    pendingLocal_ = identifier.lexeme;
+  }
+
+  void Compiler::definePendingLocal() {
+    locals_.emplace_back(*pendingLocal_, scopeDepth_);
+    pendingLocal_.reset();
+  }
+
+  void Compiler::resolveLocal(const Token& identifier) {
+    if (pendingLocal_ && *pendingLocal_ == identifier.lexeme) {
+      pendingLocal_.reset();
+      throw LoxError {
+        identifier,
+        "Identifier '" + std::string { identifier.lexeme } + "' is referenced in its own declaration."
+      };
+    }
+
+    for (auto i = locals_.size(); i-- > 0;) {
+      if (locals_[i].first == identifier.lexeme) {
+        pendingInstruction_ = { OpCode::GetLocal, identifier, static_cast<std::byte>(i) };
+        return;
+      }
+    }
+  }
+
+  void Compiler::popScopeLocals() {
+    while (locals_.size() > 0 && locals_.back().second == scopeDepth_) {
+      locals_.pop_back();
+      emit(OpCode::Pop, peek_);
+    }
+  }
+
+  void Compiler::parseStatement(bool inBlock) {
     try {
       switch (peek_.type) {
         case TokenType::Var:
@@ -63,14 +112,18 @@ namespace Lox {
       }
     } catch (const LoxError& error) {
       errorReporter_.report(error);
-      synchronizeStatement();
+      synchronizeStatement(inBlock);
     }
   }
 
   void Compiler::parseVariable() {
     const auto keyword = advance();
     const auto identifier = expectIdentifier();
-    emit(std::string { identifier.lexeme }, identifier);
+    if (!scopeDepth_) {
+      emitConstant(std::string { identifier.lexeme }, identifier);
+    } else {
+      declareLocal(identifier);
+    }
 
     if (advanceIf(TokenType::Equal)) {
       parseExpression();
@@ -79,11 +132,18 @@ namespace Lox {
     }
 
     expectSemicolon();
-    emit(OpCode::DefineGlobal, keyword);
+    if (!scopeDepth_) {
+      emit(OpCode::DefineGlobal, keyword);
+    } else {
+      definePendingLocal();
+    }
   }
 
   void Compiler::parseNonDeclaration() {
     switch (peek_.type) {
+      case TokenType::LeftBrace:
+        parseBlock();
+        return;
       case TokenType::Print:
         parsePrint();
         return;
@@ -91,6 +151,18 @@ namespace Lox {
         parseExpressionStatement();
         return;
     }
+  }
+
+  void Compiler::parseBlock() {
+    advance();
+    scopeDepth_++;
+
+    static constexpr auto inBlock = true;
+    while (!peekIs(TokenType::RightBrace) && !isAtEnd()) parseStatement(inBlock);
+
+    popScopeLocals();
+    scopeDepth_--;
+    expect(TokenType::RightBrace, "Expected '}'.");
   }
 
   void Compiler::parsePrint() {
@@ -115,11 +187,18 @@ namespace Lox {
     if (!peekIs(TokenType::Equal)) return;
 
     const auto op = advance();
-    if (!pendingEmit_) throw LoxError { op, "Invalid left-hand side of assignment." };
+    if (!pendingInstruction_) throw LoxError { op, "Invalid left-hand side of assignment." };
 
-    pendingEmit_.reset();
+    const auto opCode = pendingInstruction_->opCode;
+    const auto argument = *pendingInstruction_->argument;
+    pendingInstruction_.reset();
+
     parseAssignment();
-    emit(OpCode::SetGlobal, op);
+    if (opCode == OpCode::GetGlobal) {
+      emit(OpCode::SetGlobal, op);
+    } else {
+      emit(OpCode::SetLocal, op, argument);
+    }
   }
 
   void Compiler::parseEquality() {
@@ -222,20 +301,25 @@ namespace Lox {
 
   void Compiler::parseIdentifier() {
     const auto identifier = advance();
-    emit(std::string { identifier.lexeme }, identifier);
-    pendingEmit_ = std::make_pair(OpCode::GetGlobal, identifier);
+    if (pendingInstruction_) emitPendingInstruction();
+
+    resolveLocal(identifier);
+    if (pendingInstruction_) return;
+
+    emitConstant(std::string { identifier.lexeme }, identifier);
+    pendingInstruction_ = { OpCode::GetGlobal, identifier, std::nullopt };
   }
 
   void Compiler::parseString() {
     const auto string = std::string { peek_.lexeme.cbegin() + 1, peek_.lexeme.cend() - 1 };
     const auto token = advance();
-    emit(string, token);
+    emitConstant(string, token);
   }
 
   void Compiler::parseNumber() {
     const auto number = std::strtod(peek_.lexeme.data(), nullptr);
     const auto token = advance();
-    emit(number, token);
+    emitConstant(number, token);
   }
 
   constexpr bool Compiler::isAtEnd() const {

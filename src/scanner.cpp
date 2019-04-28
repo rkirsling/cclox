@@ -1,5 +1,6 @@
 #include "scanner.h"
 
+#include "token.h"
 #include <unordered_map>
 
 namespace {
@@ -126,7 +127,7 @@ namespace Lox {
   Token Scanner::scanIdentifierOrKeyword() {
     advanceWhile(isAlphanumeric);
     const auto pair = keywordTypes.find(lexeme());
-    return token(pair == keywordTypes.end() ? TokenType::Identifier : pair->second);
+    return token(pair == keywordTypes.cend() ? TokenType::Identifier : pair->second);
   }
 
   constexpr Token Scanner::token(TokenType type) const {
