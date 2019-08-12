@@ -36,6 +36,10 @@ namespace Lox {
     Negative,
     Not,
     Print,
+    Jump,
+    JumpIfTrue,
+    JumpIfFalse,
+    Loop,
     Return
   };
 
@@ -44,6 +48,7 @@ namespace Lox {
     constexpr std::byte read(size_t offset) const { return bytecode_[offset]; }
     void write(std::byte byte) { bytecode_.push_back(byte); }
     void write(OpCode opCode, const Token& token);
+    void patch(size_t offset, std::byte byte) { bytecode_[offset] = byte; }
 
     constexpr size_t size() const noexcept { return bytecode_.size(); }
 

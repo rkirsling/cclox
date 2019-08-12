@@ -29,6 +29,7 @@ namespace Lox {
     chunk_ = compiler_.compile(source, line);
     if (errorReporter_.errorCount() > 0) {
       errorReporter_.displayErrorCount();
+      compiler_.reset();
       return ResultStatus::StaticError;
     }
 
@@ -176,6 +177,22 @@ namespace Lox {
         case OpCode::Print:
           std::cout << stringify(pop()) << '\n';
           break;
+        case OpCode::Jump: {
+          const auto distance = static_cast<size_t>(chunk_->read(++offset_));
+          offset_ += distance;
+        } break;
+        case OpCode::JumpIfTrue: {
+          const auto distance = static_cast<size_t>(chunk_->read(++offset_));
+          if (isTruthy(valueStack_.back())) offset_ += distance;
+        } break;
+        case OpCode::JumpIfFalse: {
+          const auto distance = static_cast<size_t>(chunk_->read(++offset_));
+          if (!isTruthy(valueStack_.back())) offset_ += distance;
+        } break;
+        case OpCode::Loop: {
+          const auto distance = static_cast<size_t>(chunk_->read(++offset_));
+          offset_ -= distance;
+        } break;
         case OpCode::Return:
           return;
       }

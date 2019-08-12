@@ -31,18 +31,27 @@ namespace Lox {
     return std::move(chunk_);
   }
 
+  void Compiler::reset() {
+    locals_.clear();
+    unpatchedBreaks_.clear();
+    pendingGet_.reset();
+    pendingLocal_.reset();
+    scopeDepth_ = 0;
+    loopDepth_ = 0;
+  }
+
   void Compiler::emit(OpCode opCode, const Token& token, std::optional<std::byte> argument) {
-    if (pendingInstruction_) emitPendingInstruction();
+    if (pendingGet_) emitPendingGet();
 
     chunk_->write(opCode, token);
     if (argument) chunk_->write(*argument);
   }
 
-  void Compiler::emitPendingInstruction() {
-    chunk_->write(pendingInstruction_->opCode, pendingInstruction_->token);
-    if (pendingInstruction_->argument) chunk_->write(*pendingInstruction_->argument);
+  void Compiler::emitPendingGet() {
+    chunk_->write(pendingGet_->opCode, pendingGet_->token);
+    if (pendingGet_->argument) chunk_->write(*pendingGet_->argument);
 
-    pendingInstruction_.reset();
+    pendingGet_.reset();
   }
 
   void Compiler::emitConstant(Value&& value, const Token& token) {
@@ -52,6 +61,33 @@ namespace Lox {
     }
 
     emit(OpCode::Constant, token, static_cast<std::byte>(index));
+  }
+
+  void Compiler::emitPop() {
+    emit(OpCode::Pop, peek_);
+  }
+
+  size_t Compiler::emitJump(OpCode opCode, const Token& token) {
+    emit(opCode, token, static_cast<std::byte>(0xff));
+    return target();
+  }
+
+  void Compiler::patchJump(size_t offset) {
+    const auto distance = target() - offset;
+    if (distance > std::numeric_limits<unsigned char>::max()) {
+      throw std::overflow_error { "Jump distance too large!" };
+    }
+
+    chunk_->patch(offset - 1, static_cast<std::byte>(distance));
+  }
+
+  void Compiler::emitLoop(size_t offset, const Token& token) {
+    const auto distance = target() + 2 - offset;
+    if (distance > std::numeric_limits<unsigned char>::max()) {
+      throw std::overflow_error { "Jump distance too large!" };
+    }
+
+    emit(OpCode::Loop, token, static_cast<std::byte>(distance));
   }
 
   void Compiler::declareLocal(const Token& identifier) {
@@ -87,17 +123,23 @@ namespace Lox {
 
     for (auto i = locals_.size(); i-- > 0;) {
       if (locals_[i].first == identifier.lexeme) {
-        pendingInstruction_ = { OpCode::GetLocal, identifier, static_cast<std::byte>(i) };
+        pendingGet_ = { OpCode::GetLocal, identifier, static_cast<std::byte>(i) };
         return;
       }
     }
   }
 
-  void Compiler::popScopeLocals() {
+  void Compiler::beginScope() {
+    scopeDepth_++;
+  }
+
+  void Compiler::endScope() {
     while (locals_.size() > 0 && locals_.back().second == scopeDepth_) {
       locals_.pop_back();
-      emit(OpCode::Pop, peek_);
+      emitPop();
     }
+
+    scopeDepth_--;
   }
 
   void Compiler::parseStatement(bool inBlock) {
@@ -141,6 +183,18 @@ namespace Lox {
 
   void Compiler::parseNonDeclaration() {
     switch (peek_.type) {
+      case TokenType::Break:
+        parseBreak();
+        return;
+      case TokenType::For:
+        parseFor();
+        return;
+      case TokenType::While:
+        parseWhile();
+        return;
+      case TokenType::If:
+        parseIf();
+        return;
       case TokenType::LeftBrace:
         parseBlock();
         return;
@@ -153,15 +207,115 @@ namespace Lox {
     }
   }
 
+  void Compiler::parseBreak() {
+    const auto token = advance();
+    if (!loopDepth_) throw LoxError { token, "'break' used outside of loop." };
+
+    unpatchedBreaks_.push_back(emitJump(OpCode::Jump, token));
+    expectSemicolon();
+  }
+
+  void Compiler::parseFor() {
+    const auto token = advance();
+    beginScope();
+
+    expect(TokenType::LeftParen, "Expected '(' before 'for' loop header.");
+    if (peekIs(TokenType::Var)) {
+      parseVariable();
+    } else if (!advanceIf(TokenType::Semicolon)) {
+      parseExpressionStatement();
+    }
+
+    const auto startTarget = target();
+
+    auto endTarget = static_cast<std::optional<size_t>>(std::nullopt);
+    if (!advanceIf(TokenType::Semicolon)) {
+      parseExpression();
+      expectSemicolon();
+      endTarget = emitJump(OpCode::JumpIfFalse, token);
+
+      emitPop();
+    }
+
+    auto incrementTarget = static_cast<std::optional<size_t>>(std::nullopt);
+    if (!advanceIf(TokenType::RightParen)) {
+      const auto bodyTarget = emitJump(OpCode::Jump, token);
+
+      incrementTarget = target();
+      parseExpression();
+      emitPop();
+      expect(TokenType::RightParen, "Expected ')' after 'for' loop header.");
+      emitLoop(startTarget, token);
+
+      patchJump(bodyTarget);
+    }
+
+    loopDepth_++;
+    parseNonDeclaration();
+    loopDepth_--;
+    emitLoop(incrementTarget ? *incrementTarget : startTarget, token);
+
+    if (endTarget) {
+      patchJump(*endTarget);
+      emitPop();
+    }
+
+    for (auto target : unpatchedBreaks_) patchJump(target);
+    unpatchedBreaks_.clear();
+
+    endScope();
+  }
+
+  void Compiler::parseWhile() {
+    const auto token = advance();
+
+    const auto startTarget = target();
+    expect(TokenType::LeftParen, "Expected '(' before 'while' condition.");
+    parseExpression();
+    expect(TokenType::RightParen, "Expected ')' after 'while' condition.");
+
+    const auto endTarget = emitJump(OpCode::JumpIfFalse, token);
+
+    emitPop();
+    loopDepth_++;
+    parseNonDeclaration();
+    loopDepth_--;
+    emitLoop(startTarget, token);
+
+    patchJump(endTarget);
+    emitPop();
+
+    for (auto target : unpatchedBreaks_) patchJump(target);
+    unpatchedBreaks_.clear();
+  }
+
+  void Compiler::parseIf() {
+    const auto token = advance();
+    expect(TokenType::LeftParen, "Expected '(' before 'if' condition.");
+    parseExpression();
+    expect(TokenType::RightParen, "Expected ')' after 'if' condition.");
+
+    const auto elseTarget = emitJump(OpCode::JumpIfFalse, token);
+
+    emitPop();
+    parseNonDeclaration();
+    const auto endTarget = emitJump(OpCode::Jump, token);
+
+    patchJump(elseTarget);
+    emitPop();
+    if (advanceIf(TokenType::Else)) parseNonDeclaration();
+
+    patchJump(endTarget);
+  }
+
   void Compiler::parseBlock() {
     advance();
-    scopeDepth_++;
+    beginScope();
 
     static constexpr auto inBlock = true;
     while (!peekIs(TokenType::RightBrace) && !isAtEnd()) parseStatement(inBlock);
 
-    popScopeLocals();
-    scopeDepth_--;
+    endScope();
     expect(TokenType::RightBrace, "Expected '}'.");
   }
 
@@ -174,7 +328,7 @@ namespace Lox {
 
   void Compiler::parseExpressionStatement() {
     parseExpression();
-    emit(OpCode::Pop, peek_);
+    emitPop();
     expectSemicolon();
   }
 
@@ -183,15 +337,15 @@ namespace Lox {
   }
 
   void Compiler::parseAssignment() {
-    parseEquality();
+    parseTernary();
     if (!peekIs(TokenType::Equal)) return;
 
     const auto op = advance();
-    if (!pendingInstruction_) throw LoxError { op, "Invalid left-hand side of assignment." };
+    if (!pendingGet_) throw LoxError { op, "Invalid left-hand side of assignment." };
 
-    const auto opCode = pendingInstruction_->opCode;
-    const auto argument = *pendingInstruction_->argument;
-    pendingInstruction_.reset();
+    const auto opCode = pendingGet_->opCode;
+    const auto argument = *pendingGet_->argument;
+    pendingGet_.reset();
 
     parseAssignment();
     if (opCode == OpCode::GetGlobal) {
@@ -199,6 +353,52 @@ namespace Lox {
     } else {
       emit(OpCode::SetLocal, op, argument);
     }
+  }
+
+  void Compiler::parseTernary() {
+    parseOr();
+    if (!peekIs(TokenType::Question)) return;
+
+    const auto token = advance();
+    const auto elseTarget = emitJump(OpCode::JumpIfFalse, token);
+
+    emitPop();
+    parseAssignment();
+    const auto endTarget = emitJump(OpCode::Jump, token);
+
+    patchJump(elseTarget);
+    emitPop();
+    expect(TokenType::Colon, "Expected ':' for ternary operator.");
+    parseAssignment();
+
+    patchJump(endTarget);
+  }
+
+  void Compiler::parseOr() {
+    parseAnd();
+    if (!peekIs(TokenType::Or)) return;
+
+    const auto token = advance();
+    const auto endTarget = emitJump(OpCode::JumpIfTrue, token);
+
+    emitPop();
+    parseOr();
+
+    patchJump(endTarget);
+  }
+
+  void Compiler::parseAnd() {
+    parseEquality();
+
+    if (!peekIs(TokenType::And)) return;
+
+    const auto token = advance();
+    const auto endTarget = emitJump(OpCode::JumpIfFalse, token);
+
+    emitPop();
+    parseAnd();
+
+    patchJump(endTarget);
   }
 
   void Compiler::parseEquality() {
@@ -301,13 +501,13 @@ namespace Lox {
 
   void Compiler::parseIdentifier() {
     const auto identifier = advance();
-    if (pendingInstruction_) emitPendingInstruction();
+    if (pendingGet_) emitPendingGet();
 
     resolveLocal(identifier);
-    if (pendingInstruction_) return;
+    if (pendingGet_) return;
 
     emitConstant(std::string { identifier.lexeme }, identifier);
-    pendingInstruction_ = { OpCode::GetGlobal, identifier, std::nullopt };
+    pendingGet_ = { OpCode::GetGlobal, identifier, std::nullopt };
   }
 
   void Compiler::parseString() {

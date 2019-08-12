@@ -100,6 +100,22 @@ namespace Lox {
       case OpCode::Print:
         printf("print\n");
         break;
+      case OpCode::Jump: {
+        const auto distance = static_cast<size_t>(chunk_->read(offset_++));
+        printf("jump %02zx       # ->%02zx\n", distance, offset_ + distance);
+      } break;
+      case OpCode::JumpIfTrue: {
+        const auto distance = static_cast<size_t>(chunk_->read(offset_++));
+        printf("jump_true %02zx  # ->%02zx\n", distance, offset_ + distance);
+      } break;
+      case OpCode::JumpIfFalse: {
+        const auto distance = static_cast<size_t>(chunk_->read(offset_++));
+        printf("jump_false %02zx # ->%02zx\n", distance, offset_ + distance);
+      } break;
+      case OpCode::Loop: {
+        const auto distance = static_cast<size_t>(chunk_->read(offset_++));
+        printf("loop %02zx       # ->%02zx\n", distance, offset_ - distance);
+      } break;
       case OpCode::Return:
         printf("return\n");
         break;
